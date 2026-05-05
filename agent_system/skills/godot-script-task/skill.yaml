@@ -1,0 +1,36 @@
+name: "godot-script-task"
+version: "1.0.0"
+author: "My Demon Project"
+description: "Script Agent skill for GDScript writing and verification. Enforces godot-docs lookup, node_inventory cross-check, find_symbols syntax gate, and post-attach scene_save"
+
+# Semantic versioning constraint
+agent_compatibility:
+  script: ">=1.0.0"
+
+# Godot version constraint
+godot_version: ">=4.6.0,<5.0.0"
+
+# MCP servers/documentation sources required at runtime
+dependencies:
+  - godot-ai
+  - godot-docs
+
+# Tags for discovery and filtering
+tags:
+  - script-agent
+  - gdscript-writing
+  - verification
+  - documentation-lookup
+  - syntax-validation
+
+# Lifecycle metadata
+added: "2026-04-27"
+last_updated: "2026-05-02"
+
+# Required base skill
+extends:
+  godot-task-verify: ">=1.0.0"
+
+# Deprecation policy
+status: "stable"
+stability_note: "Specialized for Script Agent - changes to godot-docs integration require cross-version testing"

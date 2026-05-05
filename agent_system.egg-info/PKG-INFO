@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: agent-system
+Version: 0.1.0
+Summary: Portable Claude agent coordination system for Godot projects
+Requires-Python: >=3.11
+Requires-Dist: requests>=2.31.0
+Requires-Dist: anthropic>=0.25.0
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: test
+Requires-Dist: pytest>=7.4.0; extra == "test"

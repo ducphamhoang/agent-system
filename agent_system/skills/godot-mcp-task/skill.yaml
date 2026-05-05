@@ -1,0 +1,36 @@
+name: "godot-mcp-task"
+version: "1.0.0"
+author: "My Demon Project"
+description: "MCP Agent skill for Godot scene creation and verification. Enforces batch_execute-only scene creation, post-create hierarchy verification, scene_save, and node_inventory accuracy"
+
+# Semantic versioning constraint
+agent_compatibility:
+  mcp: ">=1.0.0"
+
+# Godot version constraint
+godot_version: ">=4.6.0,<5.0.0"
+
+# MCP servers/documentation sources required at runtime
+dependencies:
+  - godot-ai
+  - godot-docs
+
+# Tags for discovery and filtering
+tags:
+  - mcp-agent
+  - scene-creation
+  - verification
+  - batch-operations
+  - hierarchy-validation
+
+# Lifecycle metadata
+added: "2026-04-27"
+last_updated: "2026-05-02"
+
+# Required base skill
+extends:
+  godot-task-verify: ">=1.0.0"
+
+# Deprecation policy
+status: "stable"
+stability_note: "Specialized for MCP Agent - changes to batch_execute or scene_save require testing in full pipeline"

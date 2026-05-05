@@ -1,0 +1,42 @@
+name: "godot-orchestrator-gate"
+version: "1.1.0"
+author: "My Demon Project"
+description: "Orchestrator skill for task classification, pre-dispatch handoff validation, and post-result acceptance gate with test hash verification. Prevents wasted sub-agent calls and catches schema errors and test gaming early"
+
+# Semantic versioning constraint
+agent_compatibility:
+  orchestrator: ">=1.0.0"
+
+# Godot version constraint
+godot_version: ">=4.6.0,<5.0.0"
+
+# MCP servers/documentation sources required at runtime
+dependencies:
+  - godot-ai
+  - godot-docs
+
+# Tags for discovery and filtering
+tags:
+  - orchestrator
+  - task-classification
+  - handoff-validation
+  - schema-enforcement
+  - gating
+
+# Lifecycle metadata
+added: "2026-04-27"
+last_updated: "2026-05-02"
+
+# Required base skill
+extends:
+  godot-task-verify: ">=1.1.0"
+
+# New capability in 1.1.0: Test hash gating
+capabilities:
+  test_hash_gating: true
+  escalation_logging: true
+  hash_flag_routing: true
+
+# Deprecation policy
+status: "stable"
+stability_note: "Critical for pipeline orchestration - breaking changes block all task execution. Coordinate with all agents before versioning changes. Version 1.1.0 requires godot-task-verify >=1.1.0 for hash gating to work"

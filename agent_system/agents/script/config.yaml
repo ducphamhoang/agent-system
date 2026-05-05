@@ -1,0 +1,11 @@
+name: "script"
+role: "GDScript implementation and signal-based communication"
+version: "1.0.0"
+model: "sonnet-4.6"
+memory_path: ".claude/memory/agents/script"
+pinned_skills:
+  - godot-script-task
+dependencies:
+  - godot-task-verify
+godot_version: ">=4.6.0,<5.0.0"
+description: "Script Agent - Expert in GDScript implementation and signal-driven architecture"

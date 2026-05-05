@@ -1,0 +1,47 @@
+name: "godot-task-verify"
+version: "1.1.0"
+author: "My Demon Project"
+description: "Base task verification skill for all agents - static checks, signal validation, scene integrity, test output hashing"
+
+# Semantic versioning constraint (can be pinned in config.yaml)
+agent_compatibility:
+  orchestrator: ">=1.0.0"
+  mcp: ">=1.0.0"
+  script: ">=1.0.0"
+  qc: ">=1.0.0"
+
+# New capability in 1.1.0: Test output hashing
+capabilities:
+  test_output_hashing: true
+  hash_normalization: true
+  red_flag_detection: true
+
+# Godot version constraint (semantic range)
+godot_version: ">=4.6.0,<5.0.0"
+
+# MCP servers/documentation sources required at runtime
+dependencies:
+  - godot-ai
+  - godot-docs
+
+# Tags for discovery and filtering
+tags:
+  - verification
+  - static-analysis
+  - schema-enforcement
+  - base-skill
+
+# Lifecycle metadata
+added: "2026-04-27"
+last_updated: "2026-05-02"
+
+# Deprecation policy (if applicable)
+status: "stable"
+stability_note: "Core infrastructure skill - breaking changes require all dependent agents to update. Version 1.1.0 adds test output hashing — agents should update to use new functionality"
+
+# Documentation files
+documentation:
+  - "docs/TEST_INTEGRITY.md"
+  - "docs/AGENT_TEST_HASH_INTEGRATION.md"
+  - "docs/HASH_FLAG_EXAMPLE.md"
+  - "docs/HASH_METRICS_SCHEMA.md"
