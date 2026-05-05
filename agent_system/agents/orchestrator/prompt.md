@@ -946,35 +946,9 @@ analysis = compute_rolling_metrics(window_10)
 # Check for red flags
 if analysis.success_rate_dropped > 15%:
     flag_agent_as_stale = True
-
-# ─── AKC Learning Hook (Phase 4) ────────────────────────────────────
-# After metrics recording and analysis, trigger KB learning update
-import sys, os
-sys.path.insert(0, os.path.join(repo_root, ".claude", "scripts"))
-from orchestrator_hooks import trigger_learning_delta
-
-# Construct task_result with AKC context
-task_result = {
-    "task_id": task_id,
-    "status": "success" if qc_result.overall_status == "pass" else "failed",
-    "timestamp": datetime.utcnow().isoformat() + "Z",
-    "akc_context": {
-        "akc_enabled": True,
-        "knowledge_patterns_active": patterns_active_this_task,  # list of pattern IDs
-        "pattern_outcomes": {
-            p_id: {
-                "used": True,
-                "success": qc_result.overall_status == "pass"
-            }
-            for p_id in patterns_active_this_task
-        }
-    }
-}
-
-# Trigger learning delta (hybrid async/sync; returns immediately)
-learning_result = trigger_learning_delta(task_result)
-logger.info(f"Learning delta triggered: {learning_result.get('status')}")
 ```
+
+**After QC approves:** Invoke the `record-task-outcome` skill, passing the completed task_result built from this session's task_id, status, and any active pattern IDs. This is non-blocking — do not wait for KB update to complete before advancing to the next task.
 
 ---
 
