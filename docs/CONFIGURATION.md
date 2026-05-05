@@ -36,7 +36,7 @@ config = load_config()
 
 Configuration is loaded from environment variables with `.env` file fallback.
 
-### 5 Configuration Fields
+### 7 Configuration Fields
 
 | Variable | Type | Default | Valid Range | Purpose |
 |----------|------|---------|-------------|---------|
@@ -45,6 +45,8 @@ Configuration is loaded from environment variables with `.env` file fallback.
 | `AGENT_SYSTEM_MAX_RETRIES` | integer | `3` | 0-10 | Retry attempts on failure |
 | `AKC_SERVICE_SAFETY_LEVEL` | integer | `1` | 0, 1, or 2 | KB safety enforcement |
 | `AKC_SERVICE_URL` | string | `http://localhost:8000` | Valid URL | AKC service endpoint |
+| `AKC_ENABLED` | boolean | `true` | `true`/`false` | Enable/disable AKC learning integration |
+| `AGENT_SYSTEM_KB_DIR` | path | `agent_system/kb` | Any writable path | Directory for `patterns.jsonl` KB file |
 
 ### Precedence
 
@@ -124,7 +126,36 @@ steps:
 - Safety level 1 (balanced)
 - Localhost (AKC mock or real service in CI)
 
-### Example 4: Godot Editor Integration
+### Example 4: AKC-Disabled Deployment (No AKC Service)
+
+For teams that don't run the AKC service, set `AKC_ENABLED=false` to skip all learning calls:
+
+**.env file:**
+```env
+AKC_ENABLED=false
+AGENT_SYSTEM_MODEL=claude-opus-4-7
+AGENT_SYSTEM_TIMEOUT=30
+AGENT_SYSTEM_MAX_RETRIES=3
+AKC_SERVICE_SAFETY_LEVEL=1
+```
+
+**Effect when `AKC_ENABLED=false`:**
+- `call_learning_with_timeout()` returns `{"status": "skipped", "reason": "AKC disabled"}` immediately
+- No subprocesses spawned
+- No 30-second blocking waits
+- No HTTP calls to AKC service
+- Agents work fully; KB learning loop is simply bypassed
+
+**Setting the KB directory** (required in production pip-installed deployments):
+```env
+AGENT_SYSTEM_KB_DIR=/var/data/agent-system/kb
+```
+
+By default `AGENT_SYSTEM_KB_DIR` resolves relative to the package source tree — this works in development but breaks after `pip install`. Set this env var to an absolute path in production.
+
+---
+
+### Example 5: Godot Editor Integration
 
 **In Godot project `.env` (or set in editor environment):**
 ```env
@@ -160,6 +191,7 @@ class AgentConfig:
     max_retries: int        # 0-10 range
     safety_level: int       # 0, 1, or 2
     akc_url: str            # HTTP endpoint
+    akc_enabled: bool       # Whether AKC learning integration is active
 ```
 
 ### Usage
@@ -233,6 +265,7 @@ _DEFAULTS = {
     "max_retries": 3,
     "safety_level": 1,
     "akc_url": "http://localhost:8000",
+    "akc_enabled": True,
 }
 ```
 
@@ -323,6 +356,19 @@ AKC_SERVICE_SAFETY_LEVEL=1
 #   - http://akc-prod.example.com:8000 (production)
 #   - http://192.168.1.100:8000 (network service)
 AKC_SERVICE_URL=http://localhost:8000
+
+# ─── AKC LEARNING INTEGRATION ────────────────────────────────────────────────
+# Control whether the AKC KB learning loop runs.
+# Set to false for deployments without an AKC service.
+
+# Enable or disable AKC learning integration entirely
+# true  = learning loop active (default)
+# false = all call_learning_with_timeout() calls return immediately (skipped)
+AKC_ENABLED=true
+
+# Directory for the KB patterns.jsonl file
+# REQUIRED in production pip-installed deployments (default path is relative to source tree)
+# AGENT_SYSTEM_KB_DIR=/var/data/agent-system/kb
 ```
 
 ### Loading .env File Manually
