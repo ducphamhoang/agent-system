@@ -4,7 +4,22 @@ Comprehensive reference for the agent-system package's specialized agents, skill
 
 ## Overview
 
-The agent-system package provides a portable Claude agent coordination system designed for Godot game development. It orchestrates 4 specialized agents with a skill system and AKC HTTP client to enable pattern-driven game logic development.
+The agent-system package provides a portable Claude agent coordination system designed for Godot game development. It orchestrates 4 specialized agents with enforced skill verification gates and structured task handoffs.
+
+**What's built-in:**
+- 4 domain-specialized agents (Orchestrator, MCP, Script, QC)
+- Skill verification gates (pre/post execution validation)
+- Structured task handoff schema
+- Per-agent model routing
+- Graceful degradation defaults
+
+**What's optional (external):**
+- AKC HTTP service — remote pattern-driven learning via REST API. Not required.
+
+**What's local and wired:**
+- `learning_integration.py` — updates `kb/patterns.jsonl` after each QC-approved task via the `record-task-outcome` skill. Runs locally with no external service needed. Activated when the Orchestrator invokes `record-task-outcome` after QC passes.
+
+**To activate:** `pip install -e packages/agent-system` from the project root.
 
 ## 4 Specialized Agents
 
@@ -15,9 +30,9 @@ The agent-system package provides a portable Claude agent coordination system de
 - Receives high-level game development requests
 - Decomposes tasks into scene work (MCP) and script work
 - Routes to specialized agents (MCP Agent, Script Agent, QC Agent)
-- Manages orchestrator_hooks for learning integration
 - Controls concurrent agent execution and task prioritization
-- Decides pattern recommendation strategy based on KB maturity
+- Manages orchestrator_hooks for AKC learning integration (when enabled)
+- Decides pattern recommendation strategy based on KB maturity (when AKC available)
 
 **Key Responsibilities:**
 - Scene architecture planning
