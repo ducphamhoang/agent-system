@@ -89,13 +89,11 @@ if _config.akc_enabled and _akc.is_available():
 
 ## Response Normalization
 
-| AKC call | Local return shape | Normalized to |
+| AKC call | AKC response shape | Normalized to |
 |---|---|---|
-| `record_outcome()` | varies | `{"status": "akc_recorded", ...rest}` |
-| `query_patterns()` | varies | `[{"id", "confidence", "tier"}]` — same as local |
-| `get_stats()` | `{"high_confidence_count", "average_confidence", ...}` | same `bool` as local |
-
-> **Verify:** `high_confidence_count` and `average_confidence` are assumed field names — confirm against `/Users/ducph/Projects/akc-service` `/stats` response schema before implementing.
+| `record_outcome()` | `{"accepted": true, "task_id": "...", "update_mode": "async"\|"sync", "patterns_to_update": int, "timestamp": "..."}` | `{"status": "akc_recorded", ...rest}` |
+| `query_patterns()` | `{"patterns": [{"id", "confidence", "tier"}], "query_latency_ms": float, "source": "kb"}` | `[{"id", "confidence", "tier"}]` — same as local |
+| `get_stats()` | `{"gold_tier_count": int, "avg_confidence": float, "sample_count": int, ...}` | same `bool` as local |
 
 ---
 

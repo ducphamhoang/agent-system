@@ -321,27 +321,32 @@ learning_result = call_learning_with_timeout(result, timeout_sec=30)
 #          {"status": "error_fallback_async", "error": "...", "pid": 12345}
 ```
 
-### Hybrid Sync/Async Learning
+### Learning Flow (AKC-Primary with Fallback)
 
-The `trigger_learning_delta()` function (in `orchestrator_hooks.py`) uses hybrid logic:
+When `AKC_ENABLED=true`, the flow is:
 
-1. **Default:** Async KB update via subprocess (non-blocking)
-2. **Critical patterns (confidence < 0.50):** Synchronous blocking update (safety)
-3. **Sync timeout (>30s):** Falls back to async to prevent deadlock
+1. **AKC Primary:** Check `akc.is_available()` (50ms health check)
+   - If available → call `akc.record_outcome()` to HTTP endpoint
+   - If unavailable → fall through to local JSONL path
+2. **Local Fallback:** Update patterns.jsonl via subprocess
+   - Hybrid sync/async logic for critical patterns
+   - Async by default (non-blocking)
+   - Sync for patterns with confidence < 0.50 (safety)
+   - Sync timeout >30s falls back to async
+
+When `AKC_ENABLED=false`, skip all learning calls immediately (no subprocess, no HTTP).
 
 ```python
-from agent_system.orchestrator_hooks import trigger_learning_delta
+from agent_system import build_task_result, call_learning_with_timeout
 
-# Orchestrator calls after each task
-result = trigger_learning_delta(task_result)
+# All agents call this after task completion
+result = build_task_result("task-001", "success", active_patterns=["p1"], akc_enabled=True)
+learning_result = call_learning_with_timeout(result, timeout_sec=30)
 
 # Returns:
-# {
-#   "status": "async_spawned",  # or "sync_complete", "timeout_queued_async", etc.
-#   "patterns_to_update": 2,
-#   "blocking": False,
-#   "latency_ms": 45
-# }
+# - If AKC up: {"status": "akc_recorded", "accepted": True, ...}
+# - If AKC down: {"status": "async_spawned", "pid": 12345, ...} (local fallback)
+# - If AKC disabled: {"status": "skipped", "reason": "AKC disabled"}
 ```
 
 ### Outcome Validation
@@ -390,16 +395,18 @@ except ConfigValidationError as e:
 
 ## Orchestrator Lifecycle Hooks
 
-The `orchestrator_hooks.py` module provides integration points for learning loop updates.
+The `orchestrator_hooks.py` module provides integration points for learning loop updates. When `AKC_ENABLED=true`, calls route to the AKC service as the primary backend; when AKC is unavailable or disabled, the local JSONL fallback activates transparently.
 
 ### Key Functions
 
-| Function | Purpose | Returns |
-|---|---|---|
-| `trigger_learning_delta()` | Trigger KB update after task completion | dict with status, patterns_to_update, blocking flag |
-| `get_active_patterns()` | Query KB for patterns matching entity:component | list of {id, confidence, tier} |
-| `load_pattern()` | Load specific pattern from patterns.jsonl by ID | dict or None |
-| `should_use_gold_tier_preferentially()` | Decide if KB is mature (>5 gold patterns, avg conf >0.75) | bool |
+| Function | Purpose | AKC Path | Fallback | Returns |
+|---|---|---|---|---|
+| `trigger_learning_delta()` | Trigger KB update after task completion | `akc.record_outcome()` POST `/akc/v1/record` | local file write | dict with status, patterns_to_update, blocking flag |
+| `get_active_patterns(entity, component, task_id="")` | Query KB for patterns matching entity:component | `akc.query_patterns()` POST `/akc/v1/query` | load local patterns.jsonl | list of {id, confidence, tier} |
+| `load_pattern()` | Load specific pattern from patterns.jsonl by ID | — | patterns.jsonl scan | dict or None |
+| `should_use_gold_tier_preferentially()` | Decide if KB is mature (>5 gold patterns, avg conf >0.75) | `akc.get_stats()` GET `/akc/v1/stats` | scan patterns.jsonl | bool |
+
+**New in latest release:** `get_active_patterns()` now accepts optional `task_id` parameter (used by AKC endpoint for richer pattern matching). Local JSONL path ignores it. Default value `""` maintains backward compatibility.
 
 ### Pattern Confidence Tiers
 

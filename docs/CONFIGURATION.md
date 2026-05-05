@@ -126,9 +126,31 @@ steps:
 - Safety level 1 (balanced)
 - Localhost (AKC mock or real service in CI)
 
-### Example 4: AKC-Disabled Deployment (No AKC Service)
+### Example 4: AKC-Enabled (Standard Setup)
 
-For teams that don't run the AKC service, set `AKC_ENABLED=false` to skip all learning calls:
+For teams running the AKC service (recommended):
+
+**.env file:**
+```env
+AKC_ENABLED=true
+AKC_SERVICE_URL=http://localhost:8000
+AGENT_SYSTEM_MODEL=claude-opus-4-7
+AGENT_SYSTEM_TIMEOUT=30
+AGENT_SYSTEM_MAX_RETRIES=3
+AKC_SERVICE_SAFETY_LEVEL=1
+```
+
+**Effect when `AKC_ENABLED=true`:**
+- `call_learning_with_timeout()` checks AKC availability (50ms health check)
+  - If AKC up → calls `akc.record_outcome()` to record task result
+  - If AKC down → falls back to local JSONL subprocess update
+- `get_active_patterns()` routes to `akc.query_patterns()` (or local if down)
+- `should_use_gold_tier_preferentially()` routes to `akc.get_stats()` (or local if down)
+- Learning loop is fully active with automatic fallback
+
+### Example 5: AKC-Disabled Deployment (No AKC Service)
+
+For teams that don't run the AKC service:
 
 **.env file:**
 ```env
@@ -155,7 +177,7 @@ By default `AGENT_SYSTEM_KB_DIR` resolves relative to the package source tree �
 
 ---
 
-### Example 5: Godot Editor Integration
+### Example 6: Godot Editor Integration
 
 **In Godot project `.env` (or set in editor environment):**
 ```env
