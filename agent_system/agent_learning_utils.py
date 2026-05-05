@@ -16,6 +16,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+from agent_system.config import load_config
+from agent_system.akc_http_client import AKCClient
+
+_config = load_config()
+_akc = AKCClient(base_url=_config.akc_url)
+
 DEFAULT_TIMEOUT_SEC: int = 30
 LEARNING_INTEGRATION_CLI: Path = (
     Path(__file__).parent / "learning_integration.py"
@@ -115,6 +121,13 @@ def call_learning_with_timeout(
     # Early exit if AKC disabled
     if not task_result.get("akc_context", {}).get("akc_enabled", True):
         return {"status": "skipped", "reason": "AKC disabled"}
+
+    # AKC primary path
+    if _config.akc_enabled and _akc.is_available():
+        result = _akc.record_outcome(task_result)
+        if result:
+            return {"status": "akc_recorded", **result}
+        # fall through to local if AKC returned empty
 
     # Lazy import keeps unit tests injectable + avoids circular import
     try:

@@ -30,6 +30,12 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from agent_system.config import load_config
+from agent_system.akc_http_client import AKCClient
+
+_config = load_config()
+_akc = AKCClient(base_url=_config.akc_url)
+
 # Configurable paths — override via environment variables to decouple from any monolith layout.
 _DEFAULT_KB_DIR = Path(__file__).parent.parent / "kb"
 KB_DIR = Path(os.environ.get("AGENT_SYSTEM_KB_DIR", str(_DEFAULT_KB_DIR)))
@@ -372,7 +378,7 @@ def trigger_learning_delta(task_result_json: dict) -> dict:
     return result
 
 
-def get_active_patterns(entity: str, component: str) -> list:
+def get_active_patterns(entity: str, component: str, task_id: str = "") -> list:
     """
     Query patterns.jsonl for patterns matching entity:component.
 
@@ -393,6 +399,15 @@ def get_active_patterns(entity: str, component: str) -> list:
     if not entity or not component:
         logger.warning(f"get_active_patterns: missing entity or component ({entity}, {component})")
         return []
+
+    if _config.akc_enabled and _akc.is_available():
+        raw = _akc.query_patterns(task_id, entity, component)
+        if raw:
+            return [
+                {"id": p["id"], "confidence": p.get("confidence", 0.5), "tier": p.get("tier", "production")}
+                for p in raw
+            ]
+        # fall through if empty
 
     patterns = load_all_patterns()
     if not patterns:
@@ -432,6 +447,14 @@ def should_use_gold_tier_preferentially() -> bool:
 
     Used by orchestrator to decide pattern recommendation strategy.
     """
+
+    if _config.akc_enabled and _akc.is_available():
+        stats = _akc.get_stats()
+        if stats:
+            gold_count = stats.get("gold_tier_count", 0)
+            avg_confidence = stats.get("avg_confidence", 0.0)
+            return gold_count > 5 and avg_confidence > 0.75
+        # fall through if empty
 
     patterns = load_all_patterns()
     if not patterns:

@@ -222,5 +222,62 @@ class TestShouldUseGoldTierPreferentially(unittest.TestCase):
         self.assertTrue(result)
 
 
+# ─── TestGetActivePatternsAKC ────────────────────────────────────────────────
+
+class TestGetActivePatternsAKC(unittest.TestCase):
+    """Tests for get_active_patterns() AKC routing."""
+
+    def test_get_active_patterns_akc_path(self):
+        """Test 11: AKC path returns transformed patterns when available."""
+        import agent_system.orchestrator_hooks as hooks
+
+        with patch.object(hooks._akc, "is_available", return_value=True), \
+             patch.object(hooks._config, "akc_enabled", True), \
+             patch.object(hooks._akc, "query_patterns", return_value=[{"id": "p1", "confidence": 0.9, "tier": "gold"}]):
+            result = hooks.get_active_patterns("player", "HealthComponent", task_id="t1")
+
+        self.assertEqual(result, [{"id": "p1", "confidence": 0.9, "tier": "gold"}])
+
+    def test_get_active_patterns_akc_fallback(self):
+        """Test 12: Falls back to local JSONL path when AKC is unavailable."""
+        import agent_system.orchestrator_hooks as hooks
+
+        with patch.object(hooks._akc, "is_available", return_value=False), \
+             patch.object(hooks._config, "akc_enabled", True), \
+             patch.object(hooks, "load_all_patterns", return_value=[]) as mock_load:
+            result = hooks.get_active_patterns("player", "HealthComponent")
+
+        mock_load.assert_called_once()
+        self.assertEqual(result, [])
+
+
+# ─── TestShouldUseGoldTierAKC ────────────────────────────────────────────────
+
+class TestShouldUseGoldTierAKC(unittest.TestCase):
+    """Tests for should_use_gold_tier_preferentially() AKC routing."""
+
+    def test_gold_tier_akc_path(self):
+        """Test 13: AKC path returns True when stats meet threshold."""
+        import agent_system.orchestrator_hooks as hooks
+
+        with patch.object(hooks._akc, "is_available", return_value=True), \
+             patch.object(hooks._config, "akc_enabled", True), \
+             patch.object(hooks._akc, "get_stats", return_value={"gold_tier_count": 10, "avg_confidence": 0.88}):
+            result = hooks.should_use_gold_tier_preferentially()
+
+        self.assertTrue(result)
+
+    def test_gold_tier_akc_fallback(self):
+        """Test 14: Falls back to local scan when AKC is unavailable."""
+        import agent_system.orchestrator_hooks as hooks
+
+        with patch.object(hooks._akc, "is_available", return_value=False), \
+             patch.object(hooks._config, "akc_enabled", True), \
+             patch.object(hooks, "load_all_patterns", return_value=[]):
+            result = hooks.should_use_gold_tier_preferentially()
+
+        self.assertIsInstance(result, bool)
+
+
 if __name__ == "__main__":
     unittest.main()

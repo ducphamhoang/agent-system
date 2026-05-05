@@ -7,8 +7,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 import agent_system.learning_integration as li
+import agent_system.agent_learning_utils as alu
+from agent_system.agent_learning_utils import build_task_result, call_learning_with_timeout
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -303,6 +306,56 @@ class TestLearningIntegration(unittest.TestCase):
         """CLI --async-update with malformed stdin: exits non-zero."""
         result = _run_cli(["--async-update"], stdin_data="this is not json {{")
         self.assertNotEqual(result.returncode, 0)
+
+    # ── Test 11: AKC enabled + available → routes to AKC, skips local ────────
+
+    def test_akc_enabled_routes_to_akc(self):
+        """When AKC is enabled and available, call_learning_with_timeout returns akc_recorded and does NOT call local trigger_learning_delta."""
+        valid_task_result = build_task_result("t1", "success", active_patterns=["p1"], akc_enabled=True)
+        akc_response = {
+            "accepted": True,
+            "task_id": "t1",
+            "update_mode": "async",
+            "patterns_to_update": 1,
+            "timestamp": "2026-05-05T00:00:00Z",
+        }
+        with patch.object(alu._akc, "is_available", return_value=True), \
+             patch.object(alu._akc, "record_outcome", return_value=akc_response), \
+             patch.object(alu._config, "akc_enabled", True), \
+             patch("agent_system.agent_learning_utils.trigger_learning_delta", create=True) as mock_local, \
+             patch("agent_system.orchestrator_hooks.trigger_learning_delta") as mock_hooks:
+            result = call_learning_with_timeout(valid_task_result)
+
+        self.assertEqual(result["status"], "akc_recorded")
+        # Local trigger_learning_delta must NOT have been called
+        mock_hooks.assert_not_called()
+
+    # ── Test 12: AKC enabled but unavailable → falls back to local ────────────
+
+    def test_akc_down_falls_back_to_local(self):
+        """When AKC is enabled but is_available() returns False, local trigger_learning_delta is called."""
+        valid_task_result = build_task_result("t1", "success", active_patterns=["p1"], akc_enabled=True)
+        local_response = {"status": "ok", "patterns_updated": 1}
+        with patch.object(alu._akc, "is_available", return_value=False), \
+             patch.object(alu._config, "akc_enabled", True), \
+             patch("agent_system.orchestrator_hooks.trigger_learning_delta", return_value=local_response) as mock_local:
+            result = call_learning_with_timeout(valid_task_result)
+
+        mock_local.assert_called_once_with(valid_task_result)
+
+    # ── Test 13: AKC enabled + available but returns {} → falls back to local ─
+
+    def test_akc_returns_empty_falls_back_to_local(self):
+        """When AKC record_outcome returns {}, call_learning_with_timeout falls back to local."""
+        valid_task_result = build_task_result("t1", "success", active_patterns=["p1"], akc_enabled=True)
+        local_response = {"status": "ok", "patterns_updated": 1}
+        with patch.object(alu._akc, "is_available", return_value=True), \
+             patch.object(alu._akc, "record_outcome", return_value={}), \
+             patch.object(alu._config, "akc_enabled", True), \
+             patch("agent_system.orchestrator_hooks.trigger_learning_delta", return_value=local_response) as mock_local:
+            result = call_learning_with_timeout(valid_task_result)
+
+        mock_local.assert_called_once_with(valid_task_result)
 
 
 if __name__ == "__main__":
