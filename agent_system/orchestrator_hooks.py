@@ -42,8 +42,13 @@ LOGS_PATH = LOGS_DIR / "learning_integration.log"
 _DEFAULT_SCRIPTS_DIR = Path(__file__).parent
 SCRIPTS_DIR = Path(os.environ.get("AGENT_SYSTEM_SCRIPTS_DIR", str(_DEFAULT_SCRIPTS_DIR)))
 
-# Create logs directory if needed
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
+def _ensure_logs_dir() -> None:
+    try:
+        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+
+_ensure_logs_dir()  # called at module load for logging setup
 
 # Configure logging
 logging.basicConfig(

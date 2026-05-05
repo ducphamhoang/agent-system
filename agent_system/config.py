@@ -26,6 +26,7 @@ class AgentConfig:
     max_retries: int
     safety_level: int
     akc_url: str
+    akc_enabled: bool
 
 
 _MODEL_PATTERN = re.compile(r"^claude-[a-zA-Z0-9._-]+")
@@ -36,6 +37,7 @@ _DEFAULTS = {
     "max_retries": 3,
     "safety_level": 1,
     "akc_url": "http://localhost:8000",
+    "akc_enabled": True,
 }
 
 
@@ -86,12 +88,14 @@ def load_config() -> AgentConfig:
     raw_max_retries = os.getenv("AGENT_SYSTEM_MAX_RETRIES")
     raw_safety_level = os.getenv("AKC_SERVICE_SAFETY_LEVEL")
     raw_akc_url = os.getenv("AKC_SERVICE_URL")
+    raw_akc_enabled = os.getenv("AKC_ENABLED", "true")
 
     model = _parse_model(raw_model) if raw_model is not None else _DEFAULTS["model"]
     timeout = _parse_timeout(raw_timeout) if raw_timeout is not None else _DEFAULTS["timeout"]
     max_retries = _parse_max_retries(raw_max_retries) if raw_max_retries is not None else _DEFAULTS["max_retries"]
     safety_level = _parse_safety_level(raw_safety_level) if raw_safety_level is not None else _DEFAULTS["safety_level"]
     akc_url = raw_akc_url if raw_akc_url is not None else _DEFAULTS["akc_url"]
+    akc_enabled = raw_akc_enabled.strip().lower() not in {"false", "0", "no", "off"}
 
     return AgentConfig(
         model=model,
@@ -99,4 +103,5 @@ def load_config() -> AgentConfig:
         max_retries=max_retries,
         safety_level=safety_level,
         akc_url=akc_url,
+        akc_enabled=akc_enabled,
     )

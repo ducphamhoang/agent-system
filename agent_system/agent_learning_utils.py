@@ -112,6 +112,10 @@ def call_learning_with_timeout(
          {"status": "error_fallback_async", "error": str, "pid": int}.
       4. NEVER re-raises. Learning is fire-and-forget per orchestrator.md:558.
     """
+    # Early exit if AKC disabled
+    if not task_result.get("akc_context", {}).get("akc_enabled", True):
+        return {"status": "skipped", "reason": "AKC disabled"}
+
     # Lazy import keeps unit tests injectable + avoids circular import
     try:
         from agent_system.orchestrator_hooks import trigger_learning_delta
